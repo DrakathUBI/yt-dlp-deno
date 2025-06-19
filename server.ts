@@ -5,10 +5,16 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function json(obj: unknown, status = 200) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  // ── 1. Valida JSON ──
   let data;
   try {
     data = await req.json();
@@ -19,14 +25,12 @@ serve(async (req) => {
   const { url: videoUrl, format = "mp4" } = data;
   if (!videoUrl) return json({ error: "URL é obrigatória" }, 400);
 
-  // ── 2. Confere yt-dlp ──
   try {
     await new Deno.Command("yt-dlp", { args: ["--version"], stdout: "null" }).output();
   } catch {
     return json({ error: "yt-dlp não está instalado" }, 500);
   }
 
-  // ── 3. Info do vídeo ──
   const infoRaw = await new Deno.Command("yt-dlp", {
     args: ["-j", "--no-playlist", videoUrl],
     stdout: "piped",
@@ -37,7 +41,6 @@ serve(async (req) => {
   const ext = format === "mp3" ? "mp3" : "mp4";
   const outfile = `/tmp/${safe}_${Date.now()}.${ext}`;
 
-  // ── 4. Baixa (ou extrai áudio) ──
   const args = [
     "--output", outfile, "--no-playlist",
     ...(format === "mp3"
@@ -48,7 +51,6 @@ serve(async (req) => {
   const dl = await new Deno.Command("yt-dlp", { args }).output();
   if (dl.code !== 0) return json({ error: "Falha ao baixar" }, 500);
 
-  // ── 5. Stream para o cliente ──
   const file = await Deno.open(outfile, { read: true });
   const contentType = format === "mp3" ? "audio/mpeg" : "video/mp4";
   return new Response(file.readable, {
@@ -59,11 +61,3 @@ serve(async (req) => {
     },
   });
 });
-
-/* utilitário */
-function json(obj: unknown, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
