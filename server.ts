@@ -5,24 +5,23 @@ const cors = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function json(obj: unknown, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
+function json(x: unknown, s = 200) {
+  return new Response(JSON.stringify(x), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 }
+
+const PORT = Number(Deno.env.get("PORT") ?? "8000");
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  let data;
+  let body;
   try {
-    data = await req.json();
+    body = await req.json();
   } catch {
     return json({ error: "Corpo inválido, JSON esperado" }, 400);
   }
 
-  const { url: videoUrl, format = "mp4" } = data;
+  const { url: videoUrl, format = "mp4" } = body;
   if (!videoUrl) return json({ error: "URL é obrigatória" }, 400);
 
   try {
@@ -31,11 +30,16 @@ serve(async (req) => {
     return json({ error: "yt-dlp não está instalado" }, 500);
   }
 
-  const infoRaw = await new Deno.Command("yt-dlp", {
-    args: ["-j", "--no-playlist", videoUrl],
-    stdout: "piped",
-  }).output();
-  const info = JSON.parse(new TextDecoder().decode(infoRaw.stdout));
+  const info = JSON.parse(
+    new TextDecoder().decode(
+      (
+        await new Deno.Command("yt-dlp", {
+          args: ["-j", "--no-playlist", videoUrl],
+          stdout: "piped",
+        }).output()
+      ).stdout,
+    ),
+  );
 
   const safe = info.title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
   const ext = format === "mp3" ? "mp3" : "mp4";
@@ -52,12 +56,12 @@ serve(async (req) => {
   if (dl.code !== 0) return json({ error: "Falha ao baixar" }, 500);
 
   const file = await Deno.open(outfile, { read: true });
-  const contentType = format === "mp3" ? "audio/mpeg" : "video/mp4";
+  const ct = format === "mp3" ? "audio/mpeg" : "video/mp4";
   return new Response(file.readable, {
     headers: {
       ...cors,
-      "Content-Type": contentType,
+      "Content-Type": ct,
       "Content-Disposition": `attachment; filename="${outfile.split("/").pop()}"`,
     },
   });
-});
+}, { port: PORT });
