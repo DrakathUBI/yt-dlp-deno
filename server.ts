@@ -6,7 +6,10 @@ const cors = {
 };
 
 function json(x: unknown, s = 200) {
-  return new Response(JSON.stringify(x), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify(x), {
+    status: s,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
 }
 
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
@@ -24,35 +27,32 @@ serve(async (req) => {
   const { url: videoUrl, format = "mp4" } = body;
   if (!videoUrl) return json({ error: "URL é obrigatória" }, 400);
 
-  try {
-    await new Deno.Command("yt-dlp", { args: ["--version"], stdout: "null" }).output();
-  } catch {
-    return json({ error: "yt-dlp não está instalado" }, 500);
-  }
+  const check = await new Deno.Command("yt-dlp", {
+    args: ["--version"],
+    stdout: "null",
+  }).output();
+  if (check.code !== 0) return json({ error: "yt-dlp não está instalado" }, 500);
 
-  const info = JSON.parse(
-    new TextDecoder().decode(
-      (
-        await new Deno.Command("yt-dlp", {
-          args: ["-j", "--no-playlist", videoUrl],
-          stdout: "piped",
-        }).output()
-      ).stdout,
-    ),
-  );
+  const infoRaw = await new Deno.Command("yt-dlp", {
+    args: ["-j", "--no-playlist", videoUrl],
+    stdout: "piped",
+  }).output();
+  const info = JSON.parse(new TextDecoder().decode(infoRaw.stdout));
 
   const safe = info.title.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50);
   const ext = format === "mp3" ? "mp3" : "mp4";
   const outfile = `/tmp/${safe}_${Date.now()}.${ext}`;
 
-  const args = [
-    "--output", outfile, "--no-playlist",
+  const dlArgs = [
+    "--output",
+    outfile,
+    "--no-playlist",
     ...(format === "mp3"
       ? ["--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
       : ["--format", "best[height<=720]"]),
     videoUrl,
   ];
-  const dl = await new Deno.Command("yt-dlp", { args }).output();
+  const dl = await new Deno.Command("yt-dlp", { args: dlArgs }).output();
   if (dl.code !== 0) return json({ error: "Falha ao baixar" }, 500);
 
   const file = await Deno.open(outfile, { read: true });
