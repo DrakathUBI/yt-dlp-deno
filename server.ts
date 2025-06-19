@@ -44,9 +44,7 @@ serve(async (req) => {
   const outfile = `/tmp/${safe}_${Date.now()}.${ext}`;
 
   const dlArgs = [
-    "--output",
-    outfile,
-    "--no-playlist",
+    "--output", outfile, "--no-playlist",
     ...(format === "mp3"
       ? ["--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
       : ["--format", "best[height<=720]"]),
@@ -61,7 +59,7 @@ serve(async (req) => {
     headers: {
       ...cors,
       "Content-Type": ct,
-      "Content-Disposition": `attachment; filename="${outfile.split("/").pop()}"`,
+      "Content-Disposition": `attachment; filename=\"${outfile.split('/').pop()}\"`,
     },
   });
 }, { port: PORT });
