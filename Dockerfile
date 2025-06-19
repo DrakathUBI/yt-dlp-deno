@@ -2,21 +2,16 @@
 FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
-# 1) Dependências mínimas + ffmpeg
+# 1) Instala dependências do sistema + yt-dlp via APT
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      curl ca-certificates ffmpeg \
+      curl ca-certificates ffmpeg yt-dlp \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# 2) yt-dlp binário estático (última versão)
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
-    -o /usr/local/bin/yt-dlp \
- && chmod +x /usr/local/bin/yt-dlp
-
-# 3) Instala Deno
+# 2) Instala o binário do Deno (script oficial)
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
-ENV DENO_DIR=/deno-dir
+ENV DENO_DIR=/deno-dir          # cache do Deno fora das layers
 
 # ───────────────────────── App ─────────────────────────
 WORKDIR /app
