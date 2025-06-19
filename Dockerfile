@@ -1,27 +1,31 @@
-# Dockerfile simplificado e mais robusto
+# ───────────────────────── Base ─────────────────────────
 FROM debian:bookworm-slim
-
-# Evita prompts interativos (ex.: tzdata)
 ENV DEBIAN_FRONTEND=noninteractive
-# cria cache do Deno fora das camadas principais
-ENV DENO_DIR=/deno-dir
 
-# ── 1. Atualiza APT e instala dependências ──
+# 1) Dependências mínimas + ffmpeg
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-      curl ca-certificates ffmpeg python3 python3-pip \
+      curl ca-certificates ffmpeg \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# ── 2. Instala yt-dlp via pip ──
-RUN pip install --no-cache-dir yt-dlp
+# 2) yt-dlp binário estático (última versão)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
+    -o /usr/local/bin/yt-dlp \
+ && chmod +x /usr/local/bin/yt-dlp
 
-# ── 3. Instala o binário do Deno ──
+# 3) Instala Deno
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
+ENV DENO_DIR=/deno-dir
 
-# ── 4. Configura app ──
+# ───────────────────────── App ─────────────────────────
 WORKDIR /app
 COPY server.ts .
 
 EXPOSE 8000
-CMD ["deno", "run", "--allow-net", "--allow-run=yt-dlp,ffmpeg", "--allow-read=/tmp", "--allow-write=/tmp", "server.ts"]
+CMD ["deno", "run",
+     "--allow-net",
+     "--allow-run=yt-dlp,ffmpeg",
+     "--allow-read=/tmp",
+     "--allow-write=/tmp",
+     "server.ts"]
