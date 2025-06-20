@@ -1,16 +1,15 @@
 FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive
 
-# pacotes básicos + ffmpeg + unzip
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates ffmpeg unzip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# yt-dlp mais recente (3 MB)
+# instala a versão oficial mais recente do yt-dlp
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
     -o /usr/local/bin/yt-dlp && chmod +x /usr/local/bin/yt-dlp
 
-# Deno
+# instala o Deno
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 ENV DENO_DIR=/deno-dir
 
