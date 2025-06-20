@@ -18,6 +18,4 @@ WORKDIR /app
 COPY server.ts .
 
 EXPOSE 8000
-CMD ["deno","run","--allow-net","--allow-env=PORT",
-     "--allow-run=yt-dlp,ffmpeg","--allow-read=/tmp","--allow-write=/tmp",
-     "server.ts"]
+CMD ["deno","run","--allow-net","--allow-env=PORT","--allow-run=yt-dlp,ffmpeg","--allow-read=/tmp","--allow-write=/tmp","server.ts"]
