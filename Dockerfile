@@ -13,7 +13,7 @@ RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
 ENV DENO_DIR=/deno-dir
 
 WORKDIR /app
-COPY server.ts 
+COPY server.ts .
 COPY cookies.txt .
 EXPOSE 8000
-CMD ["deno","run","--allow-net","--allow-env=PORT","--allow-run=yt-dlp,ffmpeg","--allow-read=/tmp","--allow-write=/tmp","cookies.txt","server.ts"]
+CMD ["deno","run","--allow-net","--allow-env=PORT","--allow-run=yt-dlp,ffmpeg","--allow-read=/tmp","--allow-write=/tmp","server.ts","cookies.txt"]
